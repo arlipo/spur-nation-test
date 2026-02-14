@@ -34,10 +34,7 @@ object App extends App {
     val ancestors               = inputsHead.foldLeft(Array.empty[Node]) { case (ancestors, inputRow) =>
       val nums = inputRow.split(" ").map(_.toLong)
       nums.zipWithIndex.foldLeft(Array.empty[Node]) { case (rowNodes, (num, numInd)) =>
-        val parent1    = ancestors.applyOrElse(numInd, (_: Int) => Node.default)
-        val parent2    = ancestors.applyOrElse(numInd + 1, (_: Int) => Node.default)
-        val bestParent = Node.minPreferLongest(parent1, parent2)
-        val curNode    = bestParent.add(num)
+        val curNode = calculateCurrentNode(ancestors, num, numInd)
 
         rowNodes :+ curNode
       }
@@ -46,16 +43,25 @@ object App extends App {
     val nums          = lastRow.split(" ").map(_.toLong)
     val (_, bestNode) =
       nums.zipWithIndex.foldLeft((Array.empty[Node], Node.default)) { case ((rowNodes, bestNode), (num, numInd)) =>
-        val parent1     = ancestors.applyOrElse(numInd, (_: Int) => Node.default)
-        val parent2     = ancestors.applyOrElse(numInd + 1, (_: Int) => Node.default)
-        val bestParent  = Node.minPreferLongest(parent1, parent2)
-        val curNode     = bestParent.add(num)
+        val curNode     = calculateCurrentNode(ancestors, num, numInd)
         val curBestNode = Node.minPreferLongest(curNode, bestNode)
 
         (rowNodes :+ curNode, curBestNode)
       }
 
     println(bestNode)
+  }
+
+  private def calculateCurrentNode(ancestors: Array[Node], num: Long, numInd: Int) = {
+    val bestParent =
+      if (numInd == 0) ancestors.applyOrElse(0, (_: Int) => Node.default)
+      else {
+        val parent1 = ancestors.applyOrElse(numInd - 1, (_: Int) => Node.default)
+        val parent2 = ancestors.applyOrElse(numInd, (_: Int) => Node.default)
+        Node.minPreferLongest(parent1, parent2)
+      }
+
+    bestParent.add(num)
   }
 
   foo()
