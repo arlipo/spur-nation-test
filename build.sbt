@@ -8,6 +8,8 @@ ThisBuild / organizationName := "example"
 lazy val root = (project in file("."))
   .settings(
     name := "supr-nation-test",
+    Compile / run / fork := true,
+    Compile / run / connectInput := true,
     libraryDependencies ++= Seq(
       munit % Test,
       catsEffect
