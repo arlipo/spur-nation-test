@@ -25,26 +25,25 @@ object MinPathSolver {
     else processRows(inputs.zipWithIndex, Array.empty[Node])
 
   private def processRows[F[_]: MonadThrow](
-      rows: List[(String, Int)],
-      ancestors: Array[Node]
-  ): F[MinPathResult] =
-    rows match {
-      case (line, idx) :: tail =>
-        TriangleParser.parseLine[F](line, idx).flatMap { nums =>
-          val rowNodes = nums.zipWithIndex.foldLeft(Array.empty[Node]) { case (rowAcc, (num, numIdx)) =>
-            rowAcc :+ calculateCurrentNode(ancestors, num, numIdx)
-          }
+    rows:      List[(String, Int)],
+    ancestors: Array[Node]
+  ): F[MinPathResult] = {
+    val (line, idx) :: tail = rows
+    TriangleParser.parseLine[F](line, idx).flatMap { nums =>
+      val rowNodes = nums.zipWithIndex.foldLeft(Array.empty[Node]) { case (rowAcc, (num, numIdx)) =>
+        rowAcc :+ calculateCurrentNode(ancestors, num, numIdx)
+      }
 
-          if (tail.isEmpty) {
-            val bestNode = rowNodes.foldLeft(Node.default) { (bestSoFar, node) =>
-              Node.minPreferLongest(node, bestSoFar)
-            }
-            MinPathResult(bestNode.nums, bestNode.sum).pure[F]
-          } else {
-            processRows(tail, rowNodes)
-          }
+      if (tail.isEmpty) {
+        val bestNode = rowNodes.foldLeft(Node.default) { (bestSoFar, node) =>
+          Node.minPreferLongest(node, bestSoFar)
         }
+        MinPathResult(bestNode.nums, bestNode.sum).pure[F]
+      } else {
+        processRows(tail, rowNodes)
+      }
     }
+  }
 
   private def calculateCurrentNode(ancestors: Array[Node], num: Long, numInd: Int) = {
     val bestParent =
