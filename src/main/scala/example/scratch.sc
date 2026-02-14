@@ -11,46 +11,31 @@ val input =
 
 val l = input.split("\n").filterNot(_.isEmpty).toList
 
-case class Acc(nums: List[Int], sum: Int) {
-  def add(num: Int): Acc = Acc(nums :+ num, sum + num)
+case class Node(nums: List[Int], sum: Int) {
+  def add(num: Int): Node = Node(nums :+ num, sum + num)
 }
 
-object Acc {
-  val default = Acc(Nil, 0)
-  implicit val order: Order[Acc] = Order.by(acc => acc.sum)
+object Node {
+  val default                    = Node(Nil, 0)
+  implicit val order: Order[Node] = Order.by(acc => acc.sum)
 }
 
 def foo(): Unit = {
-  l.zipWithIndex.foldLeft(Array.empty[Acc]) { case (ancestors, (inputRow, rowInd)) =>
+  val (_, best) = l.foldLeft((Array.empty[Node], Node.default)) { case ((ancestors, best), inputRow) =>
     val nums = inputRow.split(" ").map(_.toInt)
 
-    val accs = nums.zipWithIndex.flatMap { case (num, numInd) =>
-      if (ancestors.isEmpty) {
-        Acc(num :: Nil, num) :: Nil
-      } else {
-        val parent1 = ancestors.applyOrElse(numInd, _ => Acc.default)
-        val parent2 = ancestors.applyOrElse(numInd + 1, _ => Acc.default)
-        val bestParent = Order[Acc].min(parent1, parent2)
-      }
+    nums.zipWithIndex.foldLeft((Array.empty[Node], best)) { case ((rowNodes, bestSoFar), (num, numInd)) =>
+      val parent1    = ancestors.applyOrElse(numInd, (_: Int) => Node.default)
+      val parent2    = ancestors.applyOrElse(numInd + 1, (_: Int) => Node.default)
+      val bestParent = Order[Node].min(parent1, parent2)
+      val curNode = bestParent.add(num)
+      val curBest = Order[Node].min(curNode, bestSoFar)
+
+      (rowNodes :+ curNode, curBest)
     }
-
-
-    ???
   }
+
+  println(best.nums)
 }
 
-def foo(input: List[String], calculatedAbove: Acc = Acc(Nil, 0), best: Acc = Acc(Nil, 0), x: Int = 0, y: Int = 0): Acc =
-  if (input.isEmpty) best
-  else {
-    val inputRow :: inputTail = input
-    val nums                  = inputRow.split(" ").map(_.toInt).toList
-    val nextNums              = nums.slice(x, x + 2)
-    nextNums.zipWithIndex.foldLeft(best) { case (bestSoFar, (num, index)) =>
-      val calculatedCur = Acc(calculatedAbove.nums :+ num, calculatedAbove.sum + num)
-      foo(inputTail, calculatedCur, bestSoFar)
-    }
-
-    foo(inputTail, calculatedAbove, best)
-  }
-
-foo(l)
+foo()
