@@ -1,3 +1,6 @@
+import cats.implicits._
+import cats.kernel.Order
+
 val input =
   """
     |7
@@ -9,25 +12,31 @@ val input =
 val l = input.split("\n").filterNot(_.isEmpty).toList
 
 case class Acc(nums: List[Int], sum: Int) {
-  def isLargerThen(another: Acc): Boolean =
-    sum > another.sum
-
   def add(num: Int): Acc = Acc(nums :+ num, sum + num)
 }
 
-l.zipWithIndex.foldLeft(Array.empty[Acc]) { case (ancestors, (inputRow, rowInd)) =>
-  val nums = inputRow.split(" ").map(_.toInt)
+object Acc {
+  val default = Acc(Nil, 0)
+  implicit val order: Order[Acc] = Order.by(acc => acc.sum)
+}
 
-  val accs = nums.zipWithIndex.flatMap { case (num, numInd) =>
-    if (ancestors.isEmpty) {
-      Acc(num :: Nil, num) :: Nil
-    } else {
-      val parents = ancestors.slice(numInd, numInd + 2)
+def foo(): Unit = {
+  l.zipWithIndex.foldLeft(Array.empty[Acc]) { case (ancestors, (inputRow, rowInd)) =>
+    val nums = inputRow.split(" ").map(_.toInt)
+
+    val accs = nums.zipWithIndex.flatMap { case (num, numInd) =>
+      if (ancestors.isEmpty) {
+        Acc(num :: Nil, num) :: Nil
+      } else {
+        val parent1 = ancestors.applyOrElse(numInd, _ => Acc.default)
+        val parent2 = ancestors.applyOrElse(numInd + 1, _ => Acc.default)
+        val bestParent = Order[Acc].min(parent1, parent2)
+      }
     }
+
+
+    ???
   }
-
-
-  ???
 }
 
 def foo(input: List[String], calculatedAbove: Acc = Acc(Nil, 0), best: Acc = Acc(Nil, 0), x: Int = 0, y: Int = 0): Acc =

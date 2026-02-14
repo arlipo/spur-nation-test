@@ -8,7 +8,10 @@ ThisBuild / organizationName := "example"
 lazy val root = (project in file("."))
   .settings(
     name := "supr-nation-test",
-    libraryDependencies += munit % Test
+    libraryDependencies ++= Seq(
+      munit % Test,
+      catsEffect
+    )
   )
 
 // See https://www.scala-sbt.org/1.x/docs/Using-Sonatype.html for instructions on how to publish to Sonatype.
