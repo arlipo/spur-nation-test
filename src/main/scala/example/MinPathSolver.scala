@@ -1,10 +1,8 @@
 package example
 
-import cats.data.NonEmptyList
-import cats.implicits._
+import cats.MonadThrow
 import cats.kernel.Order
-
-final case class MinPathResult(path: Vector[Long], sum: Long)
+import cats.syntax.all._
 
 object MinPathSolver {
   private case class Node(nums: Vector[Long], sum: Long, length: Long) {
@@ -22,30 +20,31 @@ object MinPathSolver {
       )
   }
 
-  def minimalPath(inputs: List[String]): MinPathResult = {
-    require(inputs.nonEmpty, "Triangle must contain at least one row")
+  def minimalPath[F[_]: MonadThrow](inputs: List[String]): F[MinPathResult] =
+    if (inputs.isEmpty) MonadThrow[F].raiseError(new IllegalArgumentException("Triangle must contain at least one row"))
+    else processRows(inputs.zipWithIndex, Array.empty[Node])
 
-    val inputsHead :+ lastRow = inputs
-    val ancestors               = inputsHead.zipWithIndex.foldLeft(Array.empty[Node]) { case (ancestors, (inputRow, rowIndex)) =>
-      val nums = TriangleParser.parseLine(inputRow, rowIndex)
-      nums.zipWithIndex.foldLeft(Array.empty[Node]) { case (rowNodes, (num, numInd)) =>
-        val curNode = calculateCurrentNode(ancestors, num, numInd)
+  private def processRows[F[_]: MonadThrow](
+      rows: List[(String, Int)],
+      ancestors: Array[Node]
+  ): F[MinPathResult] =
+    rows match {
+      case (line, idx) :: tail =>
+        TriangleParser.parseLine[F](line, idx).flatMap { nums =>
+          val rowNodes = nums.zipWithIndex.foldLeft(Array.empty[Node]) { case (rowAcc, (num, numIdx)) =>
+            rowAcc :+ calculateCurrentNode(ancestors, num, numIdx)
+          }
 
-        rowNodes :+ curNode
-      }
+          if (tail.isEmpty) {
+            val bestNode = rowNodes.foldLeft(Node.default) { (bestSoFar, node) =>
+              Node.minPreferLongest(node, bestSoFar)
+            }
+            MinPathResult(bestNode.nums, bestNode.sum).pure[F]
+          } else {
+            processRows(tail, rowNodes)
+          }
+        }
     }
-
-    val nums          = TriangleParser.parseLine(lastRow, inputs.length - 1)
-    val (_, bestNode) =
-      nums.zipWithIndex.foldLeft((Array.empty[Node], Node.default)) { case ((rowNodes, bestNode), (num, numInd)) =>
-        val curNode     = calculateCurrentNode(ancestors, num, numInd)
-        val curBestNode = Node.minPreferLongest(curNode, bestNode)
-
-        (rowNodes :+ curNode, curBestNode)
-      }
-
-    MinPathResult(bestNode.nums, bestNode.sum)
-  }
 
   private def calculateCurrentNode(ancestors: Array[Node], num: Long, numInd: Int) = {
     val bestParent =
