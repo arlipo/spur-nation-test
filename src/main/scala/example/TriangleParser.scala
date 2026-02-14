@@ -1,23 +1,24 @@
 package example
 
-import scala.io.Source
+import cats.MonadThrow
+import cats.syntax.all._
 
 object TriangleParser {
-  def parseLine(line: String, rowIndex: Int) = {
-    val parts = line.trim.split("\\s+").filter(_.nonEmpty)
-    val expectedLength = rowIndex + 1
-    if (parts.length != expectedLength) {
-      throw new IllegalArgumentException(
-        s"Row ${rowIndex + 1} should contain $expectedLength numbers but found ${parts.length}"
-      )
-    }
+  def parseLine[F[_]: MonadThrow](line: String, rowIndex: Int): F[Vector[Long]] = {
+    val tokens   = line.trim.split("\\s+").filter(_.nonEmpty).toVector
+    val expected = rowIndex + 1
 
-    parts.map { token =>
-      try token.toLong
-      catch {
-        case _: NumberFormatException =>
-          throw new IllegalArgumentException(s"Invalid number '$token' on row ${rowIndex + 1}")
+    val parsed =
+      if (tokens.length != expected) {
+        Left(new IllegalArgumentException(s"Row ${rowIndex + 1} should contain $expected numbers but found ${tokens.length}"))
+      } else {
+        tokens.traverse { token =>
+          Either
+            .catchOnly[NumberFormatException](token.toLong)
+            .leftMap(_ => new IllegalArgumentException(s"Invalid number '$token' on row ${rowIndex + 1}"))
+        }
       }
-    }.toVector
+
+    parsed.liftTo[F]
   }
 }
