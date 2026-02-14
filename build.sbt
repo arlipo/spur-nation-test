@@ -12,6 +12,7 @@ lazy val root = (project in file("."))
     Compile / run / connectInput := true,
     libraryDependencies ++= Seq(
       munit % Test,
+      munitCatsEffect % Test,
       catsEffect
     )
   )
